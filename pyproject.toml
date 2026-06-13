@@ -1,6 +1,8 @@
 [project]
 name = "cds"
 version = "0.1.0"
+description = "A structured schema and REST API (with FastAPI) for the Common Data Set"
+readme = "README.md"
 authors = [
     { name = "Noah Lowry" }
 ]

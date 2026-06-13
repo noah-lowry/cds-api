@@ -3,9 +3,10 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from cds import schema
+from cds.extraction import get_example
 
 
 def _require_id(id: str | None = None) -> str:
@@ -27,6 +28,18 @@ class APIModel(BaseModel, ABC):
         inst_cds: schema.CommonDataSet, id: str | None = None, year: str | None = None
     ) -> APIModel:
         pass
+
+    def __init_subclass__(cls, **kw):
+        super().__init_subclass__(**kw)
+        if not getattr(cls, "__isabstractmethod__", False):
+            example_id, example_year, example_cds = get_example()
+            cls.model_config = ConfigDict(
+                json_schema_extra=lambda s: s.update(
+                    examples=[
+                        cls.from_cds(example_cds, example_id, example_year).model_dump()
+                    ]
+                )
+            )
 
 
 class Enrollment(APIModel):

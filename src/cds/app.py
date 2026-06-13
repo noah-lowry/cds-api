@@ -41,16 +41,31 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = CDSAPI(lifespan=lifespan)
+app = CDSAPI(
+    title="Common Data Set API",
+    description="Rudimentary API for providing structured data on college information and admissions statistics.",
+    version="0.1.0",
+    contact={
+        "name": "Noah Lowry",
+        "url": "https://github.com/noah-lowry/cds-api",
+    },
+    license_info={
+        "name": "Apache-2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0",
+    },
+    lifespan=lifespan,
+)
 
 
 @app.get("/v1/institutions")
 async def get_institutions() -> list[api.InstitutionCard]:
+    """List all available institutions and their associated ids."""
     return sorted(app.state.institutions.values(), key=lambda inst: inst.id)
 
 
 @app.get("/v1/institutions/{id}")
 async def get_institution_by_id(id: str) -> api.InstitutionProfile:
+    """Retrieve detailed general information on a specific institution."""
     if id not in app.state.institutions:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="id not found"
@@ -62,6 +77,7 @@ async def get_institution_by_id(id: str) -> api.InstitutionProfile:
 
 @app.get("/v1/institutions/{id}/admissions")
 async def get_institution_admissions_by_id(id: str) -> api.InstitutionAdmissions:
+    """Retrieve addmissions statistics on a specific institution."""
     if id not in app.state.institutions:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="id not found"
