@@ -213,8 +213,8 @@ class Cost(APIModel):
 
 
 class FinancialAid(APIModel):
-    pct_receiving_aid: Optional[float] = None
-    pct_need_met: Optional[float] = None
+    receiving_aid: Optional[float] = None
+    need_met: Optional[float] = None
     average_aid: Optional[float] = None
 
     @staticmethod
@@ -223,20 +223,22 @@ class FinancialAid(APIModel):
     ) -> FinancialAid:
         awarded_aid = inst_cds.financial_aid.students_awarded_aid
 
-        pct_receiving_aid = None
+        receiving_aid = None
 
         if awarded_aid is not None and awarded_aid.full_time_undergrad is not None:
             num_awarded = awarded_aid.full_time_undergrad.awarded_any_aid
             num_degree_seeking = awarded_aid.full_time_undergrad.degree_seeking_count
             if num_awarded is not None and num_degree_seeking is not None:
-                pct_receiving_aid = num_awarded / num_degree_seeking
+                receiving_aid = round(num_awarded / num_degree_seeking, 4)
 
-            pct_need_met = awarded_aid.full_time_undergrad.avg_percent_need_met
+            need_met = awarded_aid.full_time_undergrad.avg_percent_need_met
+            if need_met is not None:
+                need_met = round(need_met / 100, 4)
             average_aid = awarded_aid.full_time_undergrad.avg_aid_package
 
         return FinancialAid(
-            pct_receiving_aid=pct_receiving_aid,
-            pct_need_met=pct_need_met,
+            receiving_aid=receiving_aid,
+            need_met=need_met,
             average_aid=average_aid,
         )
 
