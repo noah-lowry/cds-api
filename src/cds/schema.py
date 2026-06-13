@@ -34,6 +34,12 @@ class SexBreakdown(CDSModel):
     women: Optional[int] = None
     another_unknown: Optional[int] = None
 
+    @property
+    def total(self) -> int | None:
+        if self.men is None and self.women is None and self.another_unknown is None:
+            return None
+        return (self.men or 0) + (self.women or 0) + (self.another_unknown or 0)
+
 
 class Importance(str, Enum):
     very_important = "very_important"
