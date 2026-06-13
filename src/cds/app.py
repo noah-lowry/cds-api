@@ -1,19 +1,18 @@
 import bisect
 from contextlib import asynccontextmanager
-from starlette.datastructures import State as StarletteState
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, status
+from starlette.datastructures import State as StarletteState
 
-from cds import schema
-from cds import api
-
+from cds import api, schema
 from cds.extraction import load_structured_data  # () -> Map (id, year) CommonDataSet
 
 
 class CDSAPIState(StarletteState):
     cds_data: dict[tuple[str, str], schema.CommonDataSet]
     institutions: dict[str, api.InstitutionCard]
+
 
 class CDSAPI(FastAPI):
     state: CDSAPIState
@@ -31,7 +30,11 @@ async def lifespan(app: FastAPI):
         year = available_years[-1]
         inst_dataset = cds_data[(inst_id, year)]
         info = inst_dataset.general_information
-        location = f"{info.city}, {info.state} {info.zip}" if info.city and info.state and info.zip else None
+        location = (
+            f"{info.city}, {info.state} {info.zip}"
+            if info.city and info.state and info.zip
+            else None
+        )
         if inst_dataset.enrollment_and_persistence.enrollment is None:
             enrollment = api.Enrollment(undergraduate=None, graduate=None, total=None)
         else:
@@ -45,12 +48,13 @@ async def lifespan(app: FastAPI):
             name=info.institution_name,
             location=location,
             available_years=available_years,
-            enrollment=enrollment
+            enrollment=enrollment,
         )
 
     app.state.cds_data = cds_data
     app.state.institutions = institutions
     yield
+
 
 app = CDSAPI(lifespan=lifespan)
 
@@ -59,10 +63,13 @@ app = CDSAPI(lifespan=lifespan)
 async def get_institutions() -> list[api.InstitutionCard]:
     return sorted(app.state.institutions.values(), key=lambda inst: inst.id)
 
+
 @app.get("/v1/institutions/{id}")
 async def get_institution_by_id(id: str) -> api.InstitutionProfile:
     if id not in app.state.institutions:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="id not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="id not found"
+        )
     latest_year = max(app.state.institutions[id].available_years)
     inst_cds = app.state.cds_data[(id, latest_year)]
     return api.InstitutionProfile.from_cds(inst_cds, id, latest_year)
@@ -70,6 +77,7 @@ async def get_institution_by_id(id: str) -> api.InstitutionProfile:
 
 def serve():
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 if __name__ == "__main__":
     serve()

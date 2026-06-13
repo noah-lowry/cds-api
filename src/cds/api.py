@@ -2,15 +2,17 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from typing import Optional
+
 from pydantic import BaseModel
 
 from cds import schema
-    
+
 
 def _require_id(id: str | None = None) -> str:
     if id is None:
         raise ValueError("id is required but got None")
     return id
+
 
 def _require_year(year: str | None = None) -> str:
     if year is None:
@@ -21,7 +23,9 @@ def _require_year(year: str | None = None) -> str:
 class APIModel(BaseModel, ABC):
     @staticmethod
     @abstractmethod
-    def from_cds(inst_cds: schema.CommonDataSet, id: str | None = None, year: str | None = None) -> APIModel:
+    def from_cds(
+        inst_cds: schema.CommonDataSet, id: str | None = None, year: str | None = None
+    ) -> APIModel:
         pass
 
 
@@ -31,7 +35,9 @@ class Enrollment(APIModel):
     total: Optional[int] = None
 
     @staticmethod
-    def from_cds(inst_cds: schema.CommonDataSet, id: str | None = None, year: str | None = None) -> Enrollment:
+    def from_cds(
+        inst_cds: schema.CommonDataSet, id: str | None = None, year: str | None = None
+    ) -> Enrollment:
         enrollment = inst_cds.enrollment_and_persistence.enrollment
         if enrollment is None:
             return Enrollment()
@@ -59,7 +65,9 @@ class Identity(APIModel):
     website: Optional[str] = None
 
     @staticmethod
-    def from_cds(inst_cds: schema.CommonDataSet, id: str | None = None, year: str | None = None) -> Identity:
+    def from_cds(
+        inst_cds: schema.CommonDataSet, id: str | None = None, year: str | None = None
+    ) -> Identity:
         info = inst_cds.general_information
         return Identity(
             name=info.institution_name,
@@ -82,21 +90,33 @@ class Admissions(APIModel):
     act_range: Optional[tuple[int, int]] = None
 
     @staticmethod
-    def from_cds(inst_cds: schema.CommonDataSet, id: str | None = None, year: str | None = None) -> Admissions:
+    def from_cds(
+        inst_cds: schema.CommonDataSet, id: str | None = None, year: str | None = None
+    ) -> Admissions:
         applications = inst_cds.first_time_first_year_admission.applications
         test_policies = inst_cds.first_time_first_year_admission.test_policies
         test_scores = inst_cds.first_time_first_year_admission.test_scores
-        
+
         if applications is not None:
-            applied = applications.applied.total if applications.applied is not None else None
-            admitted = applications.admitted.total if applications.admitted is not None else None
-            enrolled = applications.enrolled.total if applications.enrolled is not None else None
+            applied = (
+                applications.applied.total if applications.applied is not None else None
+            )
+            admitted = (
+                applications.admitted.total
+                if applications.admitted is not None
+                else None
+            )
+            enrolled = (
+                applications.enrolled.total
+                if applications.enrolled is not None
+                else None
+            )
 
             if applied is not None and admitted is not None:
                 acceptance_rate = round(admitted / applied, 4)
             else:
                 acceptance_rate = None
-            
+
             if admitted is not None and enrolled is not None:
                 yield_rate = round(enrolled / admitted, 4)
             else:
@@ -107,20 +127,37 @@ class Admissions(APIModel):
             enrolled = None
             acceptance_rate = None
             yield_rate = None
-        
+
         if test_policies is not None and test_policies.sat_or_act_policy is not None:
-            test_optional = test_policies.sat_or_act_policy not in ("required", "required_for_some")
+            test_optional = test_policies.sat_or_act_policy not in (
+                "required",
+                "required_for_some",
+            )
         else:
             test_optional = None
-        
+
         if test_scores is not None:
-            if test_scores.sat_composite is not None and test_scores.sat_composite.p25 is not None and test_scores.sat_composite.p75 is not None:
-                sat_range = (round(test_scores.sat_composite.p25), round(test_scores.sat_composite.p75))
+            if (
+                test_scores.sat_composite is not None
+                and test_scores.sat_composite.p25 is not None
+                and test_scores.sat_composite.p75 is not None
+            ):
+                sat_range = (
+                    round(test_scores.sat_composite.p25),
+                    round(test_scores.sat_composite.p75),
+                )
             else:
                 sat_range = None
 
-            if test_scores.act_composite is not None and test_scores.act_composite.p25 is not None and test_scores.act_composite.p75 is not None:
-                act_range = (round(test_scores.act_composite.p25), round(test_scores.act_composite.p75))
+            if (
+                test_scores.act_composite is not None
+                and test_scores.act_composite.p25 is not None
+                and test_scores.act_composite.p75 is not None
+            ):
+                act_range = (
+                    round(test_scores.act_composite.p25),
+                    round(test_scores.act_composite.p75),
+                )
             else:
                 act_range = None
         else:
@@ -146,11 +183,13 @@ class Cost(APIModel):
     total: Optional[float] = None
 
     @staticmethod
-    def from_cds(inst_cds: schema.CommonDataSet, id: str | None = None, year: str | None = None) -> Cost:
+    def from_cds(
+        inst_cds: schema.CommonDataSet, id: str | None = None, year: str | None = None
+    ) -> Cost:
         charges = inst_cds.annual_expenses.all_undergraduate_charges
         if charges is None:
             return Cost()
-        
+
         tuition = charges.public_out_of_state_tuition or charges.private_tuition
         food_and_housing = charges.food_and_housing
         fees = charges.required_fees
@@ -164,7 +203,7 @@ class Cost(APIModel):
             total = main_expenses + fees
         else:
             total = None
-        
+
         return Cost(
             tuition=tuition,
             required_fees=fees,
@@ -179,7 +218,9 @@ class FinancialAid(APIModel):
     average_aid: Optional[float] = None
 
     @staticmethod
-    def from_cds(inst_cds: schema.CommonDataSet, id: str | None = None, year: str | None = None) -> FinancialAid:
+    def from_cds(
+        inst_cds: schema.CommonDataSet, id: str | None = None, year: str | None = None
+    ) -> FinancialAid:
         awarded_aid = inst_cds.financial_aid.students_awarded_aid
 
         pct_receiving_aid = None
@@ -192,7 +233,7 @@ class FinancialAid(APIModel):
 
             pct_need_met = awarded_aid.full_time_undergrad.avg_percent_need_met
             average_aid = awarded_aid.full_time_undergrad.avg_aid_package
-        
+
         return FinancialAid(
             pct_receiving_aid=pct_receiving_aid,
             pct_need_met=pct_need_met,
@@ -210,7 +251,9 @@ class InstitutionProfile(APIModel):
     financial_aid: FinancialAid
 
     @staticmethod
-    def from_cds(inst_cds: schema.CommonDataSet, id: str | None = None, year: str | None = None) -> InstitutionProfile:
+    def from_cds(
+        inst_cds: schema.CommonDataSet, id: str | None = None, year: str | None = None
+    ) -> InstitutionProfile:
         return InstitutionProfile(
             id=_require_id(id),
             year=_require_year(year),
@@ -220,4 +263,3 @@ class InstitutionProfile(APIModel):
             cost=Cost.from_cds(inst_cds),
             financial_aid=FinancialAid.from_cds(inst_cds),
         )
-    
