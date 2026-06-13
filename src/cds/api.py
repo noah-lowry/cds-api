@@ -48,14 +48,6 @@ class Enrollment(APIModel):
         )
 
 
-class InstitutionCard(BaseModel):
-    id: str
-    name: str
-    location: Optional[str]
-    available_years: list[str]
-    enrollment: Enrollment
-
-
 class Identity(APIModel):
     name: str
     city: Optional[str] = None
@@ -77,6 +69,13 @@ class Identity(APIModel):
             calendar=info.calendar,
             website=info.website,
         )
+
+
+class InstitutionCard(BaseModel):
+    id: str
+    identity: Identity
+    available_years: list[str]
+    latest_year: str
 
 
 class Admissions(APIModel):
@@ -243,12 +242,29 @@ class FinancialAid(APIModel):
         )
 
 
+class InstitutionAdmissions(APIModel):
+    id: str
+    year: str
+    identity: Identity
+    admissions: Admissions
+
+    @staticmethod
+    def from_cds(
+        inst_cds: schema.CommonDataSet, id: str | None = None, year: str | None = None
+    ) -> InstitutionAdmissions:
+        return InstitutionAdmissions(
+            id=_require_id(id),
+            year=_require_year(year),
+            identity=Identity.from_cds(inst_cds),
+            admissions=Admissions.from_cds(inst_cds),
+        )
+
+
 class InstitutionProfile(APIModel):
     id: str
     year: str
     identity: Identity
     enrollment: Enrollment
-    admissions: Admissions
     cost: Cost
     financial_aid: FinancialAid
 
@@ -261,7 +277,6 @@ class InstitutionProfile(APIModel):
             year=_require_year(year),
             identity=Identity.from_cds(inst_cds),
             enrollment=Enrollment.from_cds(inst_cds),
-            admissions=Admissions.from_cds(inst_cds),
             cost=Cost.from_cds(inst_cds),
             financial_aid=FinancialAid.from_cds(inst_cds),
         )

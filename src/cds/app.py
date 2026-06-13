@@ -27,28 +27,13 @@ async def lifespan(app: FastAPI):
         bisect.insort(institutions.setdefault(inst_id, []), year)
 
     for inst_id, available_years in institutions.items():
-        year = available_years[-1]
-        inst_dataset = cds_data[(inst_id, year)]
-        info = inst_dataset.general_information
-        location = (
-            f"{info.city}, {info.state} {info.zip}"
-            if info.city and info.state and info.zip
-            else None
-        )
-        if inst_dataset.enrollment_and_persistence.enrollment is None:
-            enrollment = api.Enrollment(undergraduate=None, graduate=None, total=None)
-        else:
-            enrollment = api.Enrollment(
-                undergraduate=inst_dataset.enrollment_and_persistence.enrollment.grand_total_undergraduates,
-                graduate=inst_dataset.enrollment_and_persistence.enrollment.grand_total_graduates,
-                total=inst_dataset.enrollment_and_persistence.enrollment.grand_total_all_students,
-            )
+        latest_year = max(available_years)
+        inst_dataset = cds_data[(inst_id, latest_year)]
         institutions[inst_id] = api.InstitutionCard(
             id=inst_id,
-            name=info.institution_name,
-            location=location,
+            identity=api.Identity.from_cds(inst_dataset),
             available_years=available_years,
-            enrollment=enrollment,
+            latest_year=latest_year,
         )
 
     app.state.cds_data = cds_data
@@ -73,6 +58,17 @@ async def get_institution_by_id(id: str) -> api.InstitutionProfile:
     latest_year = max(app.state.institutions[id].available_years)
     inst_cds = app.state.cds_data[(id, latest_year)]
     return api.InstitutionProfile.from_cds(inst_cds, id, latest_year)
+
+
+@app.get("/v1/institutions/{id}/admissions")
+async def get_institution_admissions_by_id(id: str) -> api.InstitutionAdmissions:
+    if id not in app.state.institutions:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="id not found"
+        )
+    latest_year = max(app.state.institutions[id].available_years)
+    inst_cds = app.state.cds_data[(id, latest_year)]
+    return api.InstitutionAdmissions.from_cds(inst_cds, id, latest_year)
 
 
 def serve():
