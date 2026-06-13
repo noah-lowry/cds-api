@@ -223,6 +223,8 @@ class FinancialAid(APIModel):
         awarded_aid = inst_cds.financial_aid.students_awarded_aid
 
         receiving_aid = None
+        need_met = None
+        average_aid = None
 
         if awarded_aid is not None and awarded_aid.full_time_undergrad is not None:
             num_awarded = awarded_aid.full_time_undergrad.awarded_any_aid
