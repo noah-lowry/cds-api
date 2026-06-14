@@ -1,8 +1,9 @@
+from fastapi.responses import RedirectResponse
 import bisect
 from contextlib import asynccontextmanager
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Request
 from starlette.datastructures import State as StarletteState
 
 from cds import api, schema
@@ -55,6 +56,11 @@ app = CDSAPI(
     },
     lifespan=lifespan,
 )
+
+
+@app.get("/", include_in_schema=False)
+def root(request: Request):
+    return RedirectResponse(url=f"{request.scope.get('root_path', '')}/redoc")
 
 
 @app.get("/v1/institutions")
